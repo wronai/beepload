@@ -1,3 +1,5 @@
+# Caddyfile - Ultimate Auth Separation
+
 # Global settings
 {
     # Auto HTTPS configuration
@@ -5,106 +7,113 @@
     acme_ca https://acme-v02.api.letsencrypt.org/directory
 }
 
-# ============ PUBLIC UPLOAD FRONTEND ============
-{$FRONTEND_DOMAIN} {
+# ============ PUBLIC UPLOAD (NO AUTH) ============
+{$FRONTEND_DOMAIN:upload.localhost} {
     # Redirect HTTP to HTTPS
     redir https://{$FRONTEND_DOMAIN}{uri}
 }
 
 https://{$FRONTEND_DOMAIN} {
-    # Reverse proxy to frontend service
     reverse_proxy frontend:3000
+    
+    # Enable large file uploads
+    request_body {
+        max_size 100MB
+    }
 }
 
-# ============ MANAGER DASHBOARD ============
-{$MANAGER_DOMAIN} {
+# ============ API ENDPOINTS WITH SELECTIVE AUTH ============
+{$API_DOMAIN:api.localhost} {
+    # PUBLIC upload endpoint - no auth required
+    route /uploads {
+        reverse_proxy upload-service:3000
+        request_body {
+            max_size 100MB
+        }
+    }
+    
+    # PUBLIC file download - no auth required  
+    route /files/* {
+        reverse_proxy upload-service:3000
+    }
+    
+    # MANAGER endpoints - require manager auth
+    route /approval/* {
+        forward_auth auth-service:3000 {
+            uri /verify-manager
+            copy_headers X-User-ID X-User-Email X-User-Roles X-Manager-ID
+        }
+        reverse_proxy approval-service:8080
+    }
+    
+    # ADMIN config endpoints - require admin auth
+    route /config/* {
+        forward_auth auth-service:3000 {
+            uri /verify-admin
+            copy_headers X-User-ID X-User-Email X-User-Roles X-Admin-ID
+        }
+        reverse_proxy config-service:8000
+    }
+    
+    # Internal notification service - no external access
+    route /notifications/* {
+        respond "Not Found" 404
+    }
+}
+
+# ============ MANAGER DASHBOARD (AUTH REQUIRED) ============
+{$MANAGER_DOMAIN:manager.localhost} {
+    # Redirect HTTP to HTTPS
     redir https://{$MANAGER_DOMAIN}{uri}
 }
 
 https://{$MANAGER_DOMAIN} {
-    # Authentication middleware
-    @manager path /manager/*
-    handle @manager {
-        # Add authentication check
-        reverse_proxy manager-frontend:3001
+    forward_auth auth-service:3000 {
+        uri /verify-manager
+        copy_headers X-User-ID X-User-Email X-User-Roles
     }
-    
-    # Fallback
-    handle {
-        reverse_proxy manager-frontend:3001
-    }
+    reverse_proxy manager-frontend:3000
 }
 
-# ============ ADMIN DASHBOARD ============
-{$ADMIN_DOMAIN} {
+# ============ ADMIN PANEL (ADMIN AUTH REQUIRED) ============
+{$ADMIN_DOMAIN:admin.localhost} {
+    # Redirect HTTP to HTTPS
     redir https://{$ADMIN_DOMAIN}{uri}
 }
 
 https://{$ADMIN_DOMAIN} {
-    # Authentication middleware
-    @admin path /admin/*
-    handle @admin {
-        # Add authentication check
-        reverse_proxy admin-frontend:3002
+    forward_auth auth-service:3000 {
+        uri /verify-admin
+        copy_headers X-User-ID X-User-Email X-User-Roles
     }
-    
-    # Fallback
-    handle {
-        reverse_proxy admin-frontend:3002
+    reverse_proxy admin-frontend:3000
+}
+
+# ============ AUTH SERVICE ============
+{$AUTH_DOMAIN:auth.localhost} {
+    # Redirect HTTP to HTTPS
+    redir https://{$AUTH_DOMAIN}{uri}
+}
+
+https://{$AUTH_DOMAIN} {
+    reverse_proxy auth-service:3000 {
+        # Forward headers for JWT validation
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Uri {uri}
     }
 }
 
-# ============ API ENDPOINTS ============
-{$API_DOMAIN} {
-    # Public upload endpoint - no auth required
-    route /uploads {
-        reverse_proxy upload-service:3000
-    }
-    
-    # Approval endpoints - require auth
-    route /approve/* {
-        # Add authentication middleware
-        reverse_proxy approval-service:8080
-    }
-    
-    # Config endpoints - require admin auth
-    route /config/* {
-        # Add admin authentication middleware
-        reverse_proxy config-service:5000
-    }
-    
-    # Notification endpoints - internal use only
-    route /notifications/* {
-        reverse_proxy notification-service:3001
-    }
+# ============ WEBDAV STORAGE (PROTECTED) ============
+{$WEBDAV_DOMAIN:files.localhost} {
+    # Redirect HTTP to HTTPS
+    redir https://{$WEBDAV_DOMAIN}{uri}
 }
 
-# ============ AUTHENTICATION ============
-{$AUTH_DOMAIN} {
-    # Kratos self-service endpoints
-    route /self-service/* {
-        reverse_proxy kratos:4433 {
-            transport http {
-                tls_insecure_skip_verify
-            }
-        }
-    }
-    
-    # Kratos admin endpoints
-    route /admin/* {
-        reverse_proxy kratos:4434 {
-            transport http {
-                tls_insecure_skip_verify
-            }
-        }
-    }
-}
-
-# ============ WEBDAV STORAGE ============
-{$WEBDAV_DOMAIN} {
-    # Basic authentication for WebDAV
-    basicauth {
-        {$WEBDAV_USER} {$WEBDAV_PASSWORD_HASH}
+https://{$WEBDAV_DOMAIN} {
+    forward_auth auth-service:3000 {
+        uri /verify-manager
+        copy_headers X-User-ID X-User-Email X-User-Roles
     }
     
     # WebDAV configuration
