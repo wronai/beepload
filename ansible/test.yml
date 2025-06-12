@@ -1,0 +1,12 @@
+---
+- name: Test Beepload deployment
+  hosts: all
+  become: true
+  vars:
+    beeploy_install_dir: /opt/beepload
+    beeploy_repo_url: https://github.com/wronai/beepload.git
+    beeploy_version: main
+
+  roles:
+    - role: beepload
+      tags: [beepload]

@@ -479,65 +479,31 @@ This system demonstrates perfect separation of concerns where authorization is h
 
 ---
 
-## **🎯 Główne Założenia Spełnione:**
+## 🌍 Internationalization
 
-### **1. Kompletna Separacja Auth od Business Logic**
-- **Caddy** - zarządza domenami i autoryzacją na poziomie proxy
-- **Auth Service** - zewnętrzny provider uwierzytelniania
-- **Business Services** - zero logiki auth, tylko headers z user info
+### Polish Version (Wersja Polska)
 
-### **2. Elastyczność Domen/Portów**
+#### Główne Założenia
+1. **Kompletna Separacja Autoryzacji**
+   - **Caddy** - zarządza domenami i autoryzacją
+   - **Auth Service** - zewnętrzny system uwierzytelniania
+   - **Usługi Biznesowe** - brak logiki autoryzacyjnej
+
+2. **Elastyczność Konfiguracji**
+   - Prosta zmiana domen i portów
+   - Wsparcie dla wielu środowisk (dev/stage/prod)
+
+#### Uruchomienie
 ```bash
-# Development
-FRONTEND_DOMAIN=upload.localhost
-API_DOMAIN=api.localhost
-
-# Production  
-FRONTEND_DOMAIN=upload.mycompany.com
-API_DOMAIN=api.mycompany.com
-
-# Custom ports
-HTTP_PORT=8080
-HTTPS_PORT=8443
-```
-
-### **3. Workflow jak opisałeś:**
-1. **Public upload** (bez auth) → `upload.localhost`
-2. **WebDAV storage** z file management  
-3. **Manager approval** (auth przez Caddy) → `manager.localhost`
-4. **Email notification** (config przez admina)
-5. **Admin configuration** (auth przez Caddy) → `admin.localhost`
-
-### **4. Technologie:**
-- **Node.js** - Upload & Notification services
-- **Groovy/Spring Boot** - Approval workflow engine
-- **Python/FastAPI** - Configuration management
-- **React** - Wszystkie frontendy (public, manager, admin)
-- **WebDAV** - File storage z web access
-- **Caddy** - Reverse proxy z auto-HTTPS
-
-## **🚀 Uruchomienie:**
-
-```bash
-# Setup
+# Konfiguracja
 cp .env.example .env
-docker-compose up -d
+# Edytuj plik .env według potrzeb
 
-# Access
-http://upload.localhost      # Public upload
-http://manager.localhost     # Manager dashboard  
-http://admin.localhost       # Admin config
-http://files.localhost       # WebDAV files
+docker-compose up -d
 ```
 
-## **✅ Korzyści Architektury:**
-
-1. **Zero Auth w Business Code** - usługi otrzymują user info przez headers
-2. **Domain Flexibility** - zmiana domen bez modyfikacji kodu
-3. **Auto HTTPS** - Caddy zarządza certyfikatami
-4. **Microservices Ready** - każda usługa niezależna
-5. **WebDAV Integration** - pliki dostępne przez web interface
-6. **Event-Driven** - asynchroniczne przetwarzanie
+### English Version
+For English documentation, please refer to the sections above.
 
 
 

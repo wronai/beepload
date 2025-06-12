@@ -1,0 +1,22 @@
+---
+galaxy_info:
+  author: Your Name
+  description: Beepload deployment role
+  company: Your Company
+  license: MIT
+  min_ansible_version: 2.12
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - focal
+    - name: Debian
+      versions:
+        - bullseye
+        - buster
+  galaxy_tags:
+    - web
+    - file-upload
+    - docker
+
+dependencies: []

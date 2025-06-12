@@ -1,0 +1,57 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: docker.io/pycontribs/ubuntu:22.04
+    pre_build_image: true
+    command: ${MOLECULE_DOCKER_COMMAND:-""}
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    capabilities:
+      - SYS_ADMIN
+    tmpfs:
+      - /run
+      - /run/lock
+    ulimits:
+      - nofile:524288:524288
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      display_failed_stderr: true
+      display_skipped_hosts: false
+      interpreter_python: auto_silent
+      retry_files_enabled: false
+  inventory:
+    group_vars:
+      all:
+        ansible_python_interpreter: /usr/bin/python3
+        beeploy_install_dir: /opt/beepload
+        beeploy_repo_url: https://github.com/wronai/beepload.git
+        beeploy_version: main
+        beeploy_ports:
+          - 80
+          - 443
+          - 3000
+scenario:
+  name: default
+  test_sequence:
+    - lint
+    - destroy
+    - dependency
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - destroy
+verifier:
+  name: ansible
+  options:
+    v: 1
