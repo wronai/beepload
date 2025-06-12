@@ -1,7 +1,3 @@
-# Kontener
-FROM node:18-alpine
-
-WORKDIR /app
 FROM node:18-alpine
 
 WORKDIR /app
@@ -9,14 +5,14 @@ WORKDIR /app
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy package files
+# Copy package files first to leverage Docker layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install only production dependencies
+RUN npm ci --only=production
 
-# Copy source code
-COPY app.js ./
+# Copy the rest of the application
+COPY . .
 
 # Create uploads directory
 RUN mkdir -p /app/uploads

@@ -1,17 +1,24 @@
 # Build stage
 FROM node:18-alpine AS build
 WORKDIR /app
+
+# Copy only package files first to leverage Docker layer caching
 COPY package*.json ./
-# First install to generate package-lock.json if it doesn't exist
-RUN npm install
-# Then install dependencies
+
+# Install only production dependencies
 RUN npm ci --only=production
+
+# Copy the rest of the files
 COPY src/ ./src/
 COPY public/ ./public/
+
+# Build the app
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
+
+# Copy built assets from build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
 # Nginx configuration
