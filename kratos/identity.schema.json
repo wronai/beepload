@@ -1,0 +1,56 @@
+{
+  "$id": "https://schemas.ory.sh/presets/kratos/identity.email.schema.json",
+  "$schema": "http://json-schema.org/draft/2020-12/schema",
+  "title": "Person",
+  "type": "object",
+  "properties": {
+    "traits": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email",
+          "minLength": 3,
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              }
+            },
+            "verification": {
+              "via": "email"
+            },
+            "recovery": {
+              "via": "email"
+            }
+          }
+        },
+        "name": {
+          "type": "object",
+          "properties": {
+            "first": {
+              "type": "string",
+              "title": "First Name"
+            },
+            "last": {
+              "type": "string",
+              "title": "Last Name"
+            }
+          }
+        },
+        "roles": {
+          "type": "array",
+          "title": "User Roles",
+          "items": {
+            "type": "string",
+            "enum": ["user", "manager", "admin"]
+          },
+          "default": ["user"]
+        }
+      },
+      "required": ["email"],
+      "additionalProperties": false
+    }
+  }
+}

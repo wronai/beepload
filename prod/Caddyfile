@@ -1,0 +1,102 @@
+# Production Caddyfile for coboarding.com
+{
+    email admin@coboarding.com
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}
+
+# Redirect HTTP to HTTPS
+:80 {
+    redir https://{host}{uri} permanent
+}
+
+# Public Upload
+upload.coboarding.com {
+    reverse_proxy frontend:3000
+    
+    request_body {
+        max_size 100MB
+    }
+}
+
+# API Endpoints
+api.coboarding.com {
+    # Upload endpoint
+    handle_path /uploads* {
+        reverse_proxy upload-service:3000
+        request_body {
+            max_size 100MB
+        }
+    }
+    
+    # File download
+    handle_path /files* {
+        reverse_proxy upload-service:3000
+    }
+    
+    # Manager endpoints
+    handle_path /approval* {
+        forward_auth auth-service:3000 {
+            uri /verify-manager
+            copy_headers X-User-ID X-User-Email X-User-Roles
+        }
+        reverse_proxy approval-service:8080
+    }
+    
+    # Config endpoints
+    handle_path /config* {
+        forward_auth auth-service:3000 {
+            uri /verify-admin
+            copy_headers X-User-ID X-User-Email X-User-Roles
+        }
+        reverse_proxy config-service:8000
+    }
+    
+    respond "API Endpoint - Not Found" 404
+}
+
+# Manager Dashboard
+manager.coboarding.com {
+    forward_auth auth-service:3000 {
+        uri /verify-manager
+        copy_headers X-User-ID X-User-Email X-User-Roles
+    }
+    reverse_proxy manager-frontend:3000
+}
+
+# Admin Panel
+admin.coboarding.com {
+    forward_auth auth-service:3000 {
+        uri /verify-admin
+        copy_headers X-User-ID X-User-Email X-User-Roles
+    }
+    reverse_proxy admin-frontend:3000
+}
+
+# Auth Service
+auth.coboarding.com {
+    reverse_proxy auth-service:3000 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# WebDAV Storage
+files.coboarding.com {
+    forward_auth auth-service:3000 {
+        uri /verify-manager
+        copy_headers X-User-ID X-User-Email X-User-Roles
+    }
+    
+    file_server browse
+    
+    @dav_methods method PUT DELETE MKCOL COPY MOVE
+    handle @dav_methods {
+        reverse_proxy webdav:80
+    }
+}

@@ -3,7 +3,7 @@
 .idea
 venv
 package-lock.json
-
+.gradle
 # Logs
 logs
 *.log

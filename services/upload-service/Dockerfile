@@ -9,8 +9,18 @@ RUN npm install
 # Copy source code
 COPY . .
 
+
 # Expose port
 EXPOSE 3000
 
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV UPLOAD_DIR=/storage
+ENV UPLOAD_MAX_SIZE=104857600
+
+# Create upload directory
+RUN mkdir -p /storage
+
 # Start the application
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

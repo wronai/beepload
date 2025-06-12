@@ -1,0 +1,78 @@
+# Local Development Caddyfile
+{
+    email admin@localhost
+    local_certs
+    auto_https off
+    debug
+    
+    log {
+        output stdout
+        format console
+        level DEBUG
+    }
+}
+
+# Public Upload
+upload.localhost {
+    reverse_proxy frontend:3000
+    
+    request_body {
+        max_size 100MB
+    }
+}
+
+# API Endpoints
+api.localhost {
+    # Upload endpoint
+    handle_path /uploads* {
+        reverse_proxy upload-service:3000
+        request_body {
+            max_size 100MB
+        }
+    }
+    
+    # File download
+    handle_path /files* {
+        reverse_proxy upload-service:3000
+    }
+    
+    # Manager endpoints
+    handle_path /approval* {
+        reverse_proxy approval-service:8080
+    }
+    
+    # Config endpoints
+    handle_path /config* {
+        reverse_proxy config-service:8000
+    }
+    
+    respond "API Endpoint - Not Found" 404
+}
+
+# Manager Dashboard
+manager.localhost {
+    reverse_proxy manager-frontend:3000
+}
+
+# Admin Panel
+admin.localhost {
+    reverse_proxy admin-frontend:3000
+}
+
+# Auth Service
+auth.localhost {
+    reverse_proxy auth-service:3000 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# WebDAV Storage
+files.localhost {
+    file_server browse
+    
+    @dav_methods method PUT DELETE MKCOL COPY MOVE
+    handle @dav_methods {
+        reverse_proxy webdav:80
+    }
+}
