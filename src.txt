@@ -1,0 +1,15 @@
+ultimate-upload-system/
+├── docker-compose.yml              # Ultimate setup
+├── Caddyfile                       # Reverse proxy + auth
+├── .env.example                    # Environment template
+├── kratos/                         # Identity management
+├── services/
+│   ├── upload-service/            # Node.js - uploads (no auth)
+│   ├── approval-service/          # Groovy - approval workflow (no auth)
+│   ├── config-service/           # Python - configuration (no auth)
+│   ├── notification-service/     # Node.js - email sending (no auth)
+│   └── auth-service/             # External auth provider
+├── frontend/                     # React - public upload form
+├── manager-frontend/            # React - manager dashboard
+├── admin-frontend/              # React - admin config
+└── webdav-storage/              # File storage
