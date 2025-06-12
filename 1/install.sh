@@ -1,4 +1,131 @@
 
+# Ultimate Upload System - Simplified Installer
+# Complete infrastructure separation with minimal files
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Configuration
+PROJECT_NAME="ultimate-upload-system"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR/$PROJECT_NAME"
+
+# Functions
+print_header() {
+    echo -e "${PURPLE}"
+    echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+    echo "║                    Ultimate Upload System Installer                         ║"
+    echo "║                     Simplified Infrastructure Setup                         ║"
+    echo "╚══════════════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+print_step() {
+    echo -e "${CYAN}[STEP]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+# Detect environment
+detect_environment() {
+    if [[ -n "${SSH_CLIENT}" ]] || [[ -n "${SSH_TTY}" ]] || [[ "${USER}" == "root" ]]; then
+        ENVIRONMENT="vps"
+        print_info "Detected VPS environment"
+    else
+        ENVIRONMENT="local"
+        print_info "Detected local development environment"
+    fi
+}
+
+# Check system requirements
+check_requirements() {
+    print_step "Checking system requirements"
+
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker is not installed"
+        install_docker
+    else
+        print_success "Docker is installed"
+    fi
+
+    # Check Docker Compose
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+        print_error "Docker Compose is not installed"
+        install_docker_compose
+    else
+        print_success "Docker Compose is installed"
+    fi
+}
+
+# Install Docker
+install_docker() {
+    print_step "Installing Docker"
+
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        sudo usermod -aG docker $USER
+        print_success "Docker installed successfully"
+        print_warning "Please logout and login again to use Docker without sudo"
+    else
+        print_info "Please install Docker Desktop from https://www.docker.com/products/docker-desktop"
+        exit 1
+    fi
+}
+
+# Install Docker Compose
+install_docker_compose() {
+    print_step "Installing Docker Compose"
+
+    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
+    sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+
+    print_success "Docker Compose installed successfully"
+}
+
+# Create simplified project structure
+create_project_structure() {
+    print_step "Creating simplified project structure"
+
+    # Remove existing directory if it exists
+    if [[ -d "$PROJECT_DIR" ]]; then
+        print_warning "Project directory already exists. Backing up..."
+        mv "$PROJECT_DIR" "${PROJECT_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
+    fi
+
+    # Create minimal structure
+    mkdir -p "$PROJECT_DIR"
+    cd "$PROJECT_DIR"
+
+    # Only essential directories
+    mkdir -p {services,frontend,scripts}
+
+    print_success "Simplified project structure created"
+}
 
 # Generate unified frontend
 generate_frontend() {
@@ -1170,395 +1297,3 @@ main() {
 
 # Run the installer
 main "$@"#!/bin/bash
-
-# Ultimate Upload System - Simplified Installer
-# Complete infrastructure separation with minimal files
-
-set -e
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Configuration
-PROJECT_NAME="ultimate-upload-system"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$SCRIPT_DIR/$PROJECT_NAME"
-
-# Functions
-print_header() {
-    echo -e "${PURPLE}"
-    echo "╔══════════════════════════════════════════════════════════════════════════════╗"
-    echo "║                    Ultimate Upload System Installer                         ║"
-    echo "║                     Simplified Infrastructure Setup                         ║"
-    echo "╚══════════════════════════════════════════════════════════════════════════════╝"
-    echo -e "${NC}"
-}
-
-print_step() {
-    echo -e "${CYAN}[STEP]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-# Detect environment
-detect_environment() {
-    if [[ -n "${SSH_CLIENT}" ]] || [[ -n "${SSH_TTY}" ]] || [[ "${USER}" == "root" ]]; then
-        ENVIRONMENT="vps"
-        print_info "Detected VPS environment"
-    else
-        ENVIRONMENT="local"
-        print_info "Detected local development environment"
-    fi
-}
-
-# Check system requirements
-check_requirements() {
-    print_step "Checking system requirements"
-
-    # Check Docker
-    if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed"
-        install_docker
-    else
-        print_success "Docker is installed"
-    fi
-
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        print_error "Docker Compose is not installed"
-        install_docker_compose
-    else
-        print_success "Docker Compose is installed"
-    fi
-}
-
-# Install Docker
-install_docker() {
-    print_step "Installing Docker"
-
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
-        sudo usermod -aG docker $USER
-        print_success "Docker installed successfully"
-        print_warning "Please logout and login again to use Docker without sudo"
-    else
-        print_info "Please install Docker Desktop from https://www.docker.com/products/docker-desktop"
-        exit 1
-    fi
-}
-
-# Install Docker Compose
-install_docker_compose() {
-    print_step "Installing Docker Compose"
-
-    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
-    sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-
-    print_success "Docker Compose installed successfully"
-}
-
-# Create simplified project structure
-create_project_structure() {
-    print_step "Creating simplified project structure"
-
-    # Remove existing directory if it exists
-    if [[ -d "$PROJECT_DIR" ]]; then
-        print_warning "Project directory already exists. Backing up..."
-        mv "$PROJECT_DIR" "${PROJECT_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
-    fi
-
-    # Create minimal structure
-    mkdir -p "$PROJECT_DIR"
-    cd "$PROJECT_DIR"
-
-    # Only essential directories
-    mkdir -p {services,frontend,scripts}
-
-    print_success "Simplified project structure created"
-}
-
-# Generate main Docker Compose
-generate_docker_compose() {
-    print_step "Generating Docker Compose configuration"
-
-    cat > docker-compose.yml << 'EOF'
-version: '3.8'
-
-services:
-  # ============ REVERSE PROXY + AUTH ============
-  caddy:
-    image: caddy:2-alpine
-    environment:
-      - FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-upload.localhost}
-      - API_DOMAIN=${API_DOMAIN:-api.localhost}
-      - MANAGER_DOMAIN=${MANAGER_DOMAIN:-manager.localhost}
-      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.localhost}
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-    networks:
-      - app_network
-    restart: unless-stopped
-
-  # ============ ALL-IN-ONE BACKEND ============
-  backend:
-    build: ./services
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - JWT_SECRET=${JWT_SECRET:-superSecretJwtKey}
-      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD:-secret}@postgres:5432/uploaddb
-      - REDIS_URL=redis://redis:6379
-    volumes:
-      - upload_files:/app/uploads
-    networks:
-      - app_network
-    depends_on:
-      - postgres
-      - redis
-    restart: unless-stopped
-
-  # ============ FRONTEND ============
-  frontend:
-    build: ./frontend
-    environment:
-      - REACT_APP_API_URL=https://${API_DOMAIN:-api.localhost}
-    networks:
-      - app_network
-    restart: unless-stopped
-
-  # ============ STORAGE ============
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=uploaddb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secret}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - app_network
-    restart: unless-stopped
-
-  redis:
-    image: redis:7-alpine
-    networks:
-      - app_network
-    restart: unless-stopped
-
-networks:
-  app_network:
-    driver: bridge
-
-volumes:
-  caddy_data:
-  postgres_data:
-  upload_files:
-EOF
-
-    print_success "Docker Compose configuration generated"
-}
-
-# Generate simplified Caddyfile
-generate_caddyfile() {
-    print_step "Generating Caddyfile"
-
-    cat > Caddyfile << 'EOF'
-# ============ PUBLIC UPLOAD (NO AUTH) ============
-{$FRONTEND_DOMAIN:upload.localhost} {
-    reverse_proxy frontend:3000
-    request_body {
-        max_size 100MB
-    }
-}
-
-# ============ API WITH SELECTIVE AUTH ============
-{$API_DOMAIN:api.localhost} {
-    # Public endpoints
-    route /api/upload {
-        reverse_proxy backend:3000
-        request_body { max_size 100MB }
-    }
-
-    route /api/files/* {
-        reverse_proxy backend:3000
-    }
-
-    # Manager endpoints
-    route /api/manager/* {
-        forward_auth backend:3000 {
-            uri /auth/verify-manager
-            copy_headers X-User-ID X-User-Email X-User-Roles
-        }
-        reverse_proxy backend:3000
-    }
-
-    # Admin endpoints
-    route /api/admin/* {
-        forward_auth backend:3000 {
-            uri /auth/verify-admin
-            copy_headers X-User-ID X-User-Email X-User-Roles
-        }
-        reverse_proxy backend:3000
-    }
-
-    # Auth endpoints
-    route /auth/* {
-        reverse_proxy backend:3000
-    }
-}
-
-# ============ MANAGER DASHBOARD ============
-{$MANAGER_DOMAIN:manager.localhost} {
-    forward_auth backend:3000 {
-        uri /auth/verify-manager
-        copy_headers X-User-ID X-User-Email X-User-Roles
-    }
-    reverse_proxy frontend:3000
-}
-
-# ============ ADMIN PANEL ============
-{$ADMIN_DOMAIN:admin.localhost} {
-    forward_auth backend:3000 {
-        uri /auth/verify-admin
-        copy_headers X-User-ID X-User-Email X-User-Roles
-    }
-    reverse_proxy frontend:3000
-}
-EOF
-
-    print_success "Caddyfile generated"
-}
-
-# Generate environment files
-generate_env_files() {
-    print_step "Generating environment configuration"
-
-    cat > .env.example << 'EOF'
-# ============ DOMAINS ============
-FRONTEND_DOMAIN=upload.localhost
-API_DOMAIN=api.localhost
-MANAGER_DOMAIN=manager.localhost
-ADMIN_DOMAIN=admin.localhost
-
-# ============ PORTS ============
-HTTP_PORT=80
-HTTPS_PORT=443
-
-# ============ ENVIRONMENT ============
-NODE_ENV=development
-
-# ============ SECURITY ============
-JWT_SECRET=change-this-in-production
-POSTGRES_PASSWORD=change-this-password
-
-# ============ PRODUCTION EXAMPLE ============
-# FRONTEND_DOMAIN=upload.yourdomain.com
-# API_DOMAIN=api.yourdomain.com
-# MANAGER_DOMAIN=manager.yourdomain.com
-# ADMIN_DOMAIN=admin.yourdomain.com
-# NODE_ENV=production
-EOF
-
-    # Generate actual .env based on environment
-    if [[ "$ENVIRONMENT" == "local" ]]; then
-        cat > .env << 'EOF'
-FRONTEND_DOMAIN=upload.localhost
-API_DOMAIN=api.localhost
-MANAGER_DOMAIN=manager.localhost
-ADMIN_DOMAIN=admin.localhost
-HTTP_PORT=80
-HTTPS_PORT=443
-NODE_ENV=development
-JWT_SECRET=local-development-secret
-POSTGRES_PASSWORD=devPassword
-EOF
-    else
-        cp .env.example .env
-    fi
-
-    print_success "Environment files generated"
-}
-
-# Generate database initialization
-generate_database_init() {
-    print_step "Generating database initialization"
-
-    cat > init.sql << 'EOF'
--- Ultimate Upload System Database
-
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    roles TEXT[] DEFAULT '{"user"}',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Uploads table
-CREATE TABLE IF NOT EXISTS uploads (
-    id SERIAL PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    original_name VARCHAR(255) NOT NULL,
-    mimetype VARCHAR(100),
-    size BIGINT,
-    description TEXT,
-    uploader_email VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'pending',
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    approved_by VARCHAR(255),
-    approved_at TIMESTAMP,
-    rejection_reason TEXT
-);
-
--- Configuration table
-CREATE TABLE IF NOT EXISTS config (
-    id SERIAL PRIMARY KEY,
-    key VARCHAR(255) UNIQUE NOT NULL,
-    value TEXT,
-    updated_by VARCHAR(255),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insert default admin user (password: admin123)
-INSERT INTO users (email, password_hash, roles)
-VALUES ('admin@company.com', '$2b$10$rQZ8uJWHJ5JKJ1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1', '{"admin","manager"}')
-ON CONFLICT (email) DO NOTHING;
-
--- Insert default manager user (password: manager123)
-INSERT INTO users (email, password_hash, roles)
-VALUES ('manager@company.com', '$2b$10$rQZ8uJWHJ5JKJ1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1', '{"manager"}')
-ON CONFLICT (email) DO NOTHING;
-
--- Insert default email config
-INSERT INTO config (key, value, updated_by)
-VALUES ('email_config', '{"smtp_host":"smtp.gmail.com","smtp_port":587,"from_email":"noreply@company.com","from_name":"Upload System"}', 'system')
-ON CONFLICT (key) DO NOTHING;
-EOF
-
