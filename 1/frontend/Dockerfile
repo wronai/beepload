@@ -2,7 +2,10 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+# First install to generate package-lock.json if it doesn't exist
+RUN npm install
+# Then install dependencies
+RUN npm ci --only=production
 COPY src/ ./src/
 COPY public/ ./public/
 RUN npm run build
