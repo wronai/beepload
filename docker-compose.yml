@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # ============ REVERSE PROXY + AUTH LAYER ============
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-proxy
+    environment:
+      - FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-upload.localhost}
+      - API_DOMAIN=${API_DOMAIN:-api.localhost}
+      - MANAGER_DOMAIN=${MANAGER_DOMAIN:-manager.localhost}
+      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.localhost}
+      - AUTH_DOMAIN=${AUTH_DOMAIN:-auth.localhost}
+      - WEBDAV_DOMAIN=${WEBDAV_DOMAIN:-files.localhost}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ AUTHENTICATION ============
+  kratos:
+    image: oryd/kratos:latest
+    container_name: kratos
+    environment:
+      - DSN=memory
+      - SELFSERVICE_FLOWS_ERROR_RETURN_TO=http://${AUTH_DOMAIN:-auth.localhost}/error
+      - SELFSERVICE_FLOWS_SETTINGS_UI_URL=http://${AUTH_DOMAIN:-auth.localhost}/settings
+      - SELFSERVICE_FLOWS_VERIFICATION_UI_URL=http://${AUTH_DOMAIN:-auth.localhost}/verify
+      - SELFSERVICE_FLOWS_RECOVERY_UI_URL=http://${AUTH_DOMAIN:-auth.localhost}/recovery
+      - SELFSERVICE_FLOWS_ERROR_UI_URL=http://${AUTH_DOMAIN:-auth.localhost}/error
+      - SELFSERVICE_FLOWS_LOGOUT_REDIRECT_URL=/
+      - SELFSERVICE_ALLOWED_RETURN_URLS=http://${AUTH_DOMAIN:-auth.localhost}/*,http://${MANAGER_DOMAIN:-manager.localhost}/*,http://${ADMIN_DOMAIN:-admin.localhost}/*
+      - SELFSERVICE_DEFAULT_BROWSER_RETURN_URL=http://${AUTH_DOMAIN:-auth.localhost}
+    volumes:
+      - ./kratos:/etc/config/kratos
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ UPLOAD SERVICE ============
+  upload-service:
+    build:
+      context: ./services/upload-service
+      dockerfile: Dockerfile
+    container_name: upload-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - WEBDAV_URL=http://webdav:80
+    volumes:
+      - ./webdav-storage:/storage
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ APPROVAL SERVICE ============
+  approval-service:
+    build:
+      context: ./services/approval-service
+      dockerfile: Dockerfile
+    container_name: approval-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ CONFIG SERVICE ============
+  config-service:
+    build:
+      context: ./services/config-service
+      dockerfile: Dockerfile
+    container_name: config-service
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+      - PORT=5000
+    volumes:
+      - config-data:/app/data
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ NOTIFICATION SERVICE ============
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ DATABASE ============
+  postgres:
+    image: postgres:13-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-upload_system}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ WEBDAV STORAGE ============
+  webdav:
+    image: bytemark/webdav:latest
+    container_name: webdav
+    environment:
+      - AUTH_TYPE=Digest
+      - USERNAME=${WEBDAV_USER:-webdav}
+      - PASSWORD=${WEBDAV_PASSWORD:-webdav}
+    volumes:
+      - ./webdav-storage:/var/lib/dav
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  # ============ FRONTEND SERVICES ============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REACT_APP_API_URL=http://${API_DOMAIN:-api.localhost}
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  manager-frontend:
+    build:
+      context: ./manager-frontend
+      dockerfile: Dockerfile
+    container_name: manager-frontend
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - REACT_APP_API_URL=http://${API_DOMAIN:-api.localhost}
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+  admin-frontend:
+    build:
+      context: ./admin-frontend
+      dockerfile: Dockerfile
+    container_name: admin-frontend
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - REACT_APP_API_URL=http://${API_DOMAIN:-api.localhost}
+    networks:
+      - upload-network
+    restart: unless-stopped
+
+networks:
+  upload-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  caddy_data:
+  config-data:
