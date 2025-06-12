@@ -1,0 +1,16 @@
+ultimate-upload-system/
+├── docker-compose.yml      # Cała infrastruktura
+├── Caddyfile              # Reverse proxy + auth
+├── .env                   # Konfiguracja
+├── init.sql               # Baza danych
+├── services/
+│   ├── app.js             # All-in-one backend (Node.js)
+│   ├── package.json       # Zależności
+│   └── Dockerfile         # Kontener
+├── frontend/
+│   ├── src/App.js         # Unified React app z routingiem
+│   ├── src/App.css        # Style
+│   └── Dockerfile         # Kontener
+└── scripts/
+    ├── start.sh           # Quick start
+    └── deploy-vps.sh      # VPS deployment
